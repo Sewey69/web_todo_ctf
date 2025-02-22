@@ -26,7 +26,7 @@
           };
           // Point the image source to the internal API search endpoint
           // (admin’s browser can access localhost)
-          img.src = "/api/search?input=" + encodeURIComponent(prefix);
+          img.src = "http://127.0.0.1:3000/api/search?input=" + encodeURIComponent(prefix);
         });
       }
 
